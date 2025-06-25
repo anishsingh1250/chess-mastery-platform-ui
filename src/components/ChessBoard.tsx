@@ -40,6 +40,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     const boardState = fenParts[0];
     const ranks = boardState.split('/');
     
+    // Better Unicode chess pieces for improved visibility
     const pieceMap: { [key: string]: { type: ChessPiece['type'], color: 'white' | 'black', symbol: string } } = {
       'K': { type: 'king', color: 'white', symbol: '♔' },
       'Q': { type: 'queen', color: 'white', symbol: '♕' },
@@ -112,58 +113,71 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
   };
 
   const getSquareClasses = (square: string, isLight: boolean) => {
-    const baseClasses = "w-16 h-16 flex items-center justify-center text-4xl cursor-pointer transition-all duration-200 hover:brightness-110 relative";
-    const colorClasses = isLight ? "bg-amber-100" : "bg-amber-800";
-    const selectedClasses = selectedSquare === square ? "ring-4 ring-blue-500" : "";
-    const highlightClasses = highlightSquares.includes(square) ? "ring-2 ring-green-500" : "";
+    const baseClasses = "w-12 h-12 flex items-center justify-center text-3xl cursor-pointer transition-all duration-200 hover:brightness-110 relative border border-gray-300";
+    const colorClasses = isLight ? "bg-yellow-100" : "bg-amber-700";
+    const selectedClasses = selectedSquare === square ? "ring-4 ring-blue-500 ring-inset" : "";
+    const highlightClasses = highlightSquares.includes(square) ? "ring-2 ring-green-500 ring-inset" : "";
     
     return `${baseClasses} ${colorClasses} ${selectedClasses} ${highlightClasses}`;
   };
 
   return (
-    <div className="flex flex-col items-center p-4 bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl shadow-2xl">
-      <div className="grid grid-cols-8 gap-0 border-4 border-amber-900 rounded-lg overflow-hidden shadow-xl">
-        {ranks.map(rank => 
-          files.map(file => {
-            const square = `${file}${rank}`;
-            const isLight = getSquareColor(file, rank);
-            const piece = pieces[square];
-            
-            return (
-              <div
-                key={square}
-                className={getSquareClasses(square, isLight)}
-                onClick={() => handleSquareClick(square)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => handleDrop(square)}
-              >
-                {piece && (
-                  <span 
-                    className={`select-none ${piece.color === 'white' ? 'text-white drop-shadow-lg' : 'text-black'}`}
-                    draggable
-                    onDragStart={() => handleDragStart(square, piece)}
-                    onDragEnd={handleDragEnd}
-                  >
-                    {piece.symbol}
-                  </span>
-                )}
-                {/* Square coordinates for debugging */}
-                <span className="absolute bottom-0 right-0 text-xs opacity-30">
-                  {square}
-                </span>
-              </div>
-            );
-          })
-        )}
+    <div className="flex flex-col items-center p-6 bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-2xl">
+      {/* Rank labels on the left */}
+      <div className="flex items-center mb-2">
+        <div className="w-8"></div>
+        <div className="grid grid-cols-8 gap-0">
+          {files.map(file => (
+            <div key={file} className="w-12 text-center text-sm font-semibold text-slate-700">
+              {file}
+            </div>
+          ))}
+        </div>
       </div>
       
-      {/* File labels */}
-      <div className="flex justify-between w-full max-w-lg mt-2">
-        {files.map(file => (
-          <div key={file} className="w-16 text-center text-sm font-semibold text-amber-800">
-            {file}
-          </div>
-        ))}
+      <div className="flex">
+        <div className="flex flex-col justify-center mr-2">
+          {ranks.map(rank => (
+            <div key={rank} className="h-12 flex items-center text-sm font-semibold text-slate-700 w-6 text-center">
+              {rank}
+            </div>
+          ))}
+        </div>
+        
+        <div className="grid grid-cols-8 gap-0 border-4 border-slate-800 rounded-lg overflow-hidden shadow-xl">
+          {ranks.map(rank => 
+            files.map(file => {
+              const square = `${file}${rank}`;
+              const isLight = getSquareColor(file, rank);
+              const piece = pieces[square];
+              
+              return (
+                <div
+                  key={square}
+                  className={getSquareClasses(square, isLight)}
+                  onClick={() => handleSquareClick(square)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => handleDrop(square)}
+                >
+                  {piece && (
+                    <span 
+                      className={`select-none text-4xl font-bold ${
+                        piece.color === 'white' 
+                          ? 'text-white drop-shadow-[2px_2px_4px_rgba(0,0,0,0.8)]' 
+                          : 'text-black drop-shadow-[2px_2px_4px_rgba(255,255,255,0.8)]'
+                      } hover:scale-110 transition-transform cursor-grab active:cursor-grabbing`}
+                      draggable
+                      onDragStart={() => handleDragStart(square, piece)}
+                      onDragEnd={handleDragEnd}
+                    >
+                      {piece.symbol}
+                    </span>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );

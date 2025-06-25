@@ -16,6 +16,7 @@ const Index = () => {
 
   const handleLessonSelect = (lesson: Lesson) => {
     setSelectedLesson(lesson);
+    console.log('Selected lesson:', lesson);
   };
 
   const handleMove = (from: string, to: string) => {
@@ -23,7 +24,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex">
       {/* Sidebar */}
       <LessonSidebar 
         selectedLessonId={selectedLesson?.id}
@@ -33,16 +34,18 @@ const Index = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col lg:flex-row">
         {/* Chess Board */}
-        <div className="flex-1 flex items-center justify-center p-6">
-          <ChessBoard 
-            position={gameState.position}
-            onMove={handleMove}
-            highlightSquares={gameState.isCheck ? [] : []} // Can be extended for highlighting
-          />
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="bg-white rounded-2xl shadow-2xl p-8">
+            <ChessBoard 
+              position={gameState.position}
+              onMove={handleMove}
+              highlightSquares={gameState.isCheck ? [] : []} // Can be extended for highlighting
+            />
+          </div>
         </div>
         
         {/* Lesson Content */}
-        <div className="w-full lg:w-96">
+        <div className="w-full lg:w-[480px]">
           <LessonContent lesson={selectedLesson} />
         </div>
       </div>
