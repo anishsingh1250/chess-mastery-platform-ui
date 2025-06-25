@@ -81,14 +81,19 @@ export const useSupabaseData = () => {
     try {
       console.log('Adding sample data...');
       
-      // Add more chapters
+      // Add more chapters with proper typing
       const { data: existingChapters } = await supabase
         .from('chapters')
         .select('title');
       
       const existingTitles = existingChapters?.map(c => c.title) || [];
       
-      const newChapters = [
+      const newChapters: Array<{
+        title: string;
+        description: string;
+        difficulty: 'beginner' | 'intermediate' | 'advanced';
+        position: number;
+      }> = [
         { title: 'Openings', description: 'Learn fundamental chess openings', difficulty: 'intermediate', position: 4 },
         { title: 'Tactics', description: 'Practice tactical combinations', difficulty: 'intermediate', position: 5 },
         { title: 'Endgames', description: 'Master essential endgame positions', difficulty: 'advanced', position: 6 },

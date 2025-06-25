@@ -32,20 +32,20 @@ const Index = () => {
       />
       
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row">
+      <div className="flex-1 flex flex-col xl:flex-row">
         {/* Chess Board */}
-        <div className="flex-1 flex items-center justify-center p-8">
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
+        <div className="flex-1 flex items-center justify-center p-4 xl:p-8 min-h-[50vh] xl:min-h-screen">
+          <div className="w-full max-w-lg">
             <ChessBoard 
               position={gameState.position}
               onMove={handleMove}
-              highlightSquares={gameState.isCheck ? [] : []} // Can be extended for highlighting
+              highlightSquares={gameState.isCheck ? [] : []} 
             />
           </div>
         </div>
         
         {/* Lesson Content */}
-        <div className="w-full lg:w-[480px]">
+        <div className="w-full xl:w-[480px] border-t xl:border-t-0 xl:border-l border-gray-200">
           <LessonContent lesson={selectedLesson} />
         </div>
       </div>

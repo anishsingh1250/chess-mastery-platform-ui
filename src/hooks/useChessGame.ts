@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Chess } from 'chess.js';
 
 export interface GameState {
@@ -16,10 +16,16 @@ export const useChessGame = (initialPgn?: string, initialFen?: string) => {
   const [gameState, setGameState] = useState<GameState>(() => {
     const chess = new Chess();
     
-    if (initialFen) {
-      chess.load(initialFen);
-    } else if (initialPgn) {
-      chess.loadPgn(initialPgn);
+    // Try to load initial position
+    try {
+      if (initialFen && initialFen !== 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
+        chess.load(initialFen);
+      } else if (initialPgn) {
+        chess.loadPgn(initialPgn);
+      }
+    } catch (error) {
+      console.warn('Failed to load initial position:', error);
+      // Fall back to starting position
     }
     
     return {
@@ -35,23 +41,27 @@ export const useChessGame = (initialPgn?: string, initialFen?: string) => {
     };
   });
 
+  const updateGameState = useCallback((newChess: Chess) => {
+    setGameState({
+      chess: newChess,
+      position: newChess.fen(),
+      history: newChess.history(),
+      currentMoveIndex: newChess.history().length - 1,
+      gameStatus: newChess.isGameOver() ? 
+        (newChess.isCheckmate() ? 'checkmate' : 
+         newChess.isStalemate() ? 'stalemate' : 'draw') : 'playing',
+      turn: newChess.turn(),
+      isCheck: newChess.inCheck()
+    });
+  }, []);
+
   const makeMove = useCallback((from: string, to: string, promotion?: string) => {
     try {
       const newChess = new Chess(gameState.chess.fen());
       const move = newChess.move({ from, to, promotion });
       
       if (move) {
-        setGameState({
-          chess: newChess,
-          position: newChess.fen(),
-          history: newChess.history(),
-          currentMoveIndex: newChess.history().length - 1,
-          gameStatus: newChess.isGameOver() ? 
-            (newChess.isCheckmate() ? 'checkmate' : 
-             newChess.isStalemate() ? 'stalemate' : 'draw') : 'playing',
-          turn: newChess.turn(),
-          isCheck: newChess.inCheck()
-        });
+        updateGameState(newChess);
         return true;
       }
       return false;
@@ -59,24 +69,45 @@ export const useChessGame = (initialPgn?: string, initialFen?: string) => {
       console.error('Invalid move:', error);
       return false;
     }
-  }, [gameState.chess]);
+  }, [gameState.chess, updateGameState]);
 
   const goToMove = useCallback((moveIndex: number) => {
     const newChess = new Chess();
-    const moves = gameState.history.slice(0, moveIndex + 1);
     
-    for (const move of moves) {
-      newChess.move(move);
+    if (moveIndex >= 0 && moveIndex < gameState.history.length) {
+      const moves = gameState.history.slice(0, moveIndex + 1);
+      
+      try {
+        for (const move of moves) {
+          newChess.move(move);
+        }
+        
+        setGameState(prev => ({
+          ...prev,
+          chess: newChess,
+          position: newChess.fen(),
+          currentMoveIndex: moveIndex,
+          turn: newChess.turn(),
+          isCheck: newChess.inCheck(),
+          gameStatus: newChess.isGameOver() ? 
+            (newChess.isCheckmate() ? 'checkmate' : 
+             newChess.isStalemate() ? 'stalemate' : 'draw') : 'playing'
+        }));
+      } catch (error) {
+        console.error('Error navigating to move:', error);
+      }
+    } else if (moveIndex === -1) {
+      // Go to starting position
+      setGameState(prev => ({
+        ...prev,
+        chess: newChess,
+        position: newChess.fen(),
+        currentMoveIndex: -1,
+        turn: newChess.turn(),
+        isCheck: newChess.inCheck(),
+        gameStatus: 'playing'
+      }));
     }
-    
-    setGameState(prev => ({
-      ...prev,
-      chess: newChess,
-      position: newChess.fen(),
-      currentMoveIndex: moveIndex,
-      turn: newChess.turn(),
-      isCheck: newChess.inCheck()
-    }));
   }, [gameState.history]);
 
   const goToStart = useCallback(() => {
@@ -84,7 +115,9 @@ export const useChessGame = (initialPgn?: string, initialFen?: string) => {
   }, [goToMove]);
 
   const goToEnd = useCallback(() => {
-    goToMove(gameState.history.length - 1);
+    if (gameState.history.length > 0) {
+      goToMove(gameState.history.length - 1);
+    }
   }, [goToMove, gameState.history.length]);
 
   const goToPrevious = useCallback(() => {
@@ -102,51 +135,46 @@ export const useChessGame = (initialPgn?: string, initialFen?: string) => {
   const loadPgn = useCallback((pgn: string) => {
     try {
       const newChess = new Chess();
-      newChess.loadPgn(pgn);
+      const success = newChess.loadPgn(pgn);
       
-      setGameState({
-        chess: newChess,
-        position: newChess.fen(),
-        history: newChess.history(),
-        currentMoveIndex: newChess.history().length - 1,
-        gameStatus: newChess.isGameOver() ? 
-          (newChess.isCheckmate() ? 'checkmate' : 
-           newChess.isStalemate() ? 'stalemate' : 'draw') : 'playing',
-        turn: newChess.turn(),
-        isCheck: newChess.inCheck()
-      });
-      return true;
+      if (success) {
+        updateGameState(newChess);
+        return true;
+      } else {
+        console.error('Failed to load PGN');
+        return false;
+      }
     } catch (error) {
       console.error('Error loading PGN:', error);
       return false;
     }
-  }, []);
+  }, [updateGameState]);
 
   const loadFen = useCallback((fen: string) => {
     try {
       const newChess = new Chess();
-      newChess.load(fen);
+      const success = newChess.load(fen);
       
-      setGameState({
-        chess: newChess,
-        position: newChess.fen(),
-        history: newChess.history(),
-        currentMoveIndex: newChess.history().length - 1,
-        gameStatus: newChess.isGameOver() ? 
-          (newChess.isCheckmate() ? 'checkmate' : 
-           newChess.isStalemate() ? 'stalemate' : 'draw') : 'playing',
-        turn: newChess.turn(),
-        isCheck: newChess.inCheck()
-      });
-      return true;
+      if (success) {
+        updateGameState(newChess);
+        return true;
+      } else {
+        console.error('Failed to load FEN');
+        return false;
+      }
     } catch (error) {
       console.error('Error loading FEN:', error);
       return false;
     }
-  }, []);
+  }, [updateGameState]);
 
   const getPgn = useCallback(() => {
-    return gameState.chess.pgn();
+    try {
+      return gameState.chess.pgn();
+    } catch (error) {
+      console.error('Error getting PGN:', error);
+      return '';
+    }
   }, [gameState.chess]);
 
   const reset = useCallback(() => {
@@ -161,6 +189,25 @@ export const useChessGame = (initialPgn?: string, initialFen?: string) => {
       isCheck: false
     });
   }, []);
+
+  // Update game state when initial props change
+  useEffect(() => {
+    if (initialPgn || initialFen) {
+      const newChess = new Chess();
+      
+      try {
+        if (initialFen && initialFen !== 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1') {
+          newChess.load(initialFen);
+        } else if (initialPgn) {
+          newChess.loadPgn(initialPgn);
+        }
+        
+        updateGameState(newChess);
+      } catch (error) {
+        console.warn('Failed to load updated position:', error);
+      }
+    }
+  }, [initialPgn, initialFen, updateGameState]);
 
   return {
     gameState,

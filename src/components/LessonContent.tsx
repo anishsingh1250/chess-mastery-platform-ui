@@ -8,6 +8,7 @@ import PgnImportDialog from './PgnImportDialog';
 import { useChessGame } from '@/hooks/useChessGame';
 import { type Lesson } from '@/hooks/useSupabaseData';
 import { Download, Settings, Calendar, Users, Trophy } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface LessonContentProps {
   lesson: Lesson | null;
@@ -17,6 +18,7 @@ const LessonContent: React.FC<LessonContentProps> = ({ lesson }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoPlayInterval, setAutoPlayInterval] = useState<NodeJS.Timeout | null>(null);
   const [showPgnDialog, setShowPgnDialog] = useState(false);
+  const { toast } = useToast();
   
   const {
     gameState,
@@ -25,15 +27,22 @@ const LessonContent: React.FC<LessonContentProps> = ({ lesson }) => {
     goToNext,
     goToEnd,
     loadPgn,
-    getPgn
+    getPgn,
+    reset
   } = useChessGame(lesson?.pgn, lesson?.fen);
 
   const handlePlay = () => {
     if (!isPlaying && gameState.currentMoveIndex < gameState.history.length - 1) {
       setIsPlaying(true);
       const interval = setInterval(() => {
-        goToNext();
-      }, 1000);
+        if (gameState.currentMoveIndex < gameState.history.length - 1) {
+          goToNext();
+        } else {
+          setIsPlaying(false);
+          clearInterval(interval);
+          setAutoPlayInterval(null);
+        }
+      }, 1500);
       setAutoPlayInterval(interval);
     }
   };
@@ -53,30 +62,93 @@ const LessonContent: React.FC<LessonContentProps> = ({ lesson }) => {
     }
   }, [gameState.currentMoveIndex, gameState.history.length, isPlaying]);
 
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (autoPlayInterval) {
+        clearInterval(autoPlayInterval);
+      }
+    };
+  }, [autoPlayInterval]);
+
   const handleLoadPgn = () => {
     setShowPgnDialog(true);
   };
 
   const handlePgnImport = (pgn: string) => {
-    const success = loadPgn(pgn);
-    if (!success) {
-      alert('Invalid PGN format. Please check your PGN and try again.');
-    } else {
-      console.log('PGN successfully loaded:', pgn);
+    try {
+      const success = loadPgn(pgn);
+      if (success) {
+        toast({
+          title: "PGN Imported Successfully",
+          description: "The PGN has been loaded and you can now navigate through the moves.",
+        });
+        console.log('PGN successfully loaded:', pgn);
+      } else {
+        toast({
+          title: "Import Failed",
+          description: "Invalid PGN format. Please check your PGN and try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('PGN import error:', error);
+      toast({
+        title: "Import Error",
+        description: "An error occurred while importing the PGN. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleExportPgn = () => {
-    const pgn = getPgn();
-    const blob = new Blob([pgn], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${lesson?.title || 'chess-game'}.pgn`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      const pgn = getPgn();
+      if (pgn) {
+        const blob = new Blob([pgn], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${lesson?.title || 'chess-game'}.pgn`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        toast({
+          title: "PGN Exported",
+          description: "The PGN file has been downloaded successfully.",
+        });
+      } else {
+        toast({
+          title: "Export Failed",
+          description: "No game data available to export.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export Error",
+        description: "An error occurred while exporting the PGN.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMoveClick = (moveIndex: number) => {
+    // Navigate to specific move when clicked
+    if (moveIndex <= gameState.currentMoveIndex) {
+      // Go backwards
+      while (gameState.currentMoveIndex > moveIndex) {
+        goToPrevious();
+      }
+    } else {
+      // Go forwards
+      while (gameState.currentMoveIndex < moveIndex) {
+        goToNext();
+      }
+    }
   };
 
   if (!lesson) {
@@ -178,7 +250,7 @@ const LessonContent: React.FC<LessonContentProps> = ({ lesson }) => {
                 onLoadPgn={handleLoadPgn}
                 onExportPgn={handleExportPgn}
                 isPlaying={isPlaying}
-                canGoBack={gameState.currentMoveIndex >= 0}
+                canGoBack={gameState.currentMoveIndex > -1}
                 canGoForward={gameState.currentMoveIndex < gameState.history.length - 1}
               />
             </div>
@@ -230,11 +302,11 @@ const LessonContent: React.FC<LessonContentProps> = ({ lesson }) => {
               </CardHeader>
               <CardContent>
                 <div className="bg-gray-50 rounded-lg p-4 max-h-40 overflow-y-auto">
-                  <div className="grid grid-cols-6 gap-2 text-sm font-mono">
+                  <div className="grid grid-cols-8 gap-1 text-sm font-mono">
                     {gameState.history.map((move, index) => (
                       <button
                         key={index}
-                        onClick={() => goToNext()}
+                        onClick={() => handleMoveClick(index)}
                         className={`text-left p-2 rounded hover:bg-gray-200 transition-colors ${
                           index === gameState.currentMoveIndex ? 'bg-blue-100 text-blue-700 font-semibold' : 'text-gray-700'
                         }`}
@@ -292,9 +364,17 @@ const LessonContent: React.FC<LessonContentProps> = ({ lesson }) => {
               </div>
               {lesson.pgn && (
                 <div className="mt-4">
-                  <span className="font-medium text-gray-700">PGN:</span>
+                  <span className="font-medium text-gray-700">Original PGN:</span>
                   <div className="mt-1 p-3 bg-gray-100 rounded-lg max-h-32 overflow-y-auto">
                     <code className="text-xs text-gray-800 whitespace-pre-wrap">{lesson.pgn}</code>
+                  </div>
+                </div>
+              )}
+              {gameState.history.length > 0 && (
+                <div className="mt-4">
+                  <span className="font-medium text-gray-700">Current Game PGN:</span>
+                  <div className="mt-1 p-3 bg-gray-100 rounded-lg max-h-32 overflow-y-auto">
+                    <code className="text-xs text-gray-800 whitespace-pre-wrap">{getPgn()}</code>
                   </div>
                 </div>
               )}

@@ -40,7 +40,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     const boardState = fenParts[0];
     const ranks = boardState.split('/');
     
-    // Better Unicode chess pieces for improved visibility
+    // Chess pieces with improved styling
     const pieceMap: { [key: string]: { type: ChessPiece['type'], color: 'white' | 'black', symbol: string } } = {
       'K': { type: 'king', color: 'white', symbol: '♔' },
       'Q': { type: 'queen', color: 'white', symbol: '♕' },
@@ -113,22 +113,22 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
   };
 
   const getSquareClasses = (square: string, isLight: boolean) => {
-    const baseClasses = "w-12 h-12 flex items-center justify-center text-3xl cursor-pointer transition-all duration-200 hover:brightness-110 relative border border-gray-300";
-    const colorClasses = isLight ? "bg-yellow-100" : "bg-amber-700";
-    const selectedClasses = selectedSquare === square ? "ring-4 ring-blue-500 ring-inset" : "";
+    const baseClasses = "aspect-square flex items-center justify-center text-2xl md:text-3xl lg:text-4xl cursor-pointer transition-all duration-200 hover:brightness-110 relative border border-gray-300 select-none";
+    const colorClasses = isLight ? "bg-amber-100" : "bg-amber-700";
+    const selectedClasses = selectedSquare === square ? "ring-2 ring-blue-500 ring-inset" : "";
     const highlightClasses = highlightSquares.includes(square) ? "ring-2 ring-green-500 ring-inset" : "";
     
     return `${baseClasses} ${colorClasses} ${selectedClasses} ${highlightClasses}`;
   };
 
   return (
-    <div className="flex flex-col items-center p-6 bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-2xl">
-      {/* Rank labels on the left */}
+    <div className="flex flex-col items-center p-4 md:p-6 bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-2xl max-w-fit mx-auto">
+      {/* File labels on top */}
       <div className="flex items-center mb-2">
-        <div className="w-8"></div>
-        <div className="grid grid-cols-8 gap-0">
+        <div className="w-6 md:w-8"></div>
+        <div className="grid grid-cols-8 gap-0 w-80 md:w-96 lg:w-[480px]">
           {files.map(file => (
-            <div key={file} className="w-12 text-center text-sm font-semibold text-slate-700">
+            <div key={file} className="text-center text-xs md:text-sm font-semibold text-slate-700 py-1">
               {file}
             </div>
           ))}
@@ -136,15 +136,17 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
       </div>
       
       <div className="flex">
+        {/* Rank labels on the left */}
         <div className="flex flex-col justify-center mr-2">
           {ranks.map(rank => (
-            <div key={rank} className="h-12 flex items-center text-sm font-semibold text-slate-700 w-6 text-center">
+            <div key={rank} className="aspect-square flex items-center text-xs md:text-sm font-semibold text-slate-700 w-6 md:w-8 justify-center">
               {rank}
             </div>
           ))}
         </div>
         
-        <div className="grid grid-cols-8 gap-0 border-4 border-slate-800 rounded-lg overflow-hidden shadow-xl">
+        {/* Chess board grid */}
+        <div className="grid grid-cols-8 gap-0 border-4 border-slate-800 rounded-lg overflow-hidden shadow-xl w-80 md:w-96 lg:w-[480px]">
           {ranks.map(rank => 
             files.map(file => {
               const square = `${file}${rank}`;
@@ -161,7 +163,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
                 >
                   {piece && (
                     <span 
-                      className={`select-none text-4xl font-bold ${
+                      className={`select-none font-bold ${
                         piece.color === 'white' 
                           ? 'text-white drop-shadow-[2px_2px_4px_rgba(0,0,0,0.8)]' 
                           : 'text-black drop-shadow-[2px_2px_4px_rgba(255,255,255,0.8)]'
