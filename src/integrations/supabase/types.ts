@@ -9,7 +9,166 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      chapters: {
+        Row: {
+          created_at: string
+          description: string | null
+          difficulty: Database["public"]["Enums"]["difficulty_level"]
+          id: string
+          is_active: boolean
+          position: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          difficulty?: Database["public"]["Enums"]["difficulty_level"]
+          id?: string
+          is_active?: boolean
+          position?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          difficulty?: Database["public"]["Enums"]["difficulty_level"]
+          id?: string
+          is_active?: boolean
+          position?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lessons: {
+        Row: {
+          black_player: string | null
+          chapter_id: string
+          created_at: string
+          date_played: string | null
+          description: string | null
+          fen: string | null
+          id: string
+          is_active: boolean
+          pgn: string | null
+          position: number
+          result: string | null
+          title: string
+          updated_at: string
+          white_player: string | null
+        }
+        Insert: {
+          black_player?: string | null
+          chapter_id: string
+          created_at?: string
+          date_played?: string | null
+          description?: string | null
+          fen?: string | null
+          id?: string
+          is_active?: boolean
+          pgn?: string | null
+          position?: number
+          result?: string | null
+          title: string
+          updated_at?: string
+          white_player?: string | null
+        }
+        Update: {
+          black_player?: string | null
+          chapter_id?: string
+          created_at?: string
+          date_played?: string | null
+          description?: string | null
+          fen?: string | null
+          id?: string
+          is_active?: boolean
+          pgn?: string | null
+          position?: number
+          result?: string | null
+          title?: string
+          updated_at?: string
+          white_player?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lessons_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_games: {
+        Row: {
+          completed: boolean
+          created_at: string
+          current_move: number
+          id: string
+          lesson_id: string
+          notes: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          current_move?: number
+          id?: string
+          lesson_id: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          current_move?: number
+          id?: string
+          lesson_id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_games_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +177,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      difficulty_level: "beginner" | "intermediate" | "advanced"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +292,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      difficulty_level: ["beginner", "intermediate", "advanced"],
+    },
   },
 } as const

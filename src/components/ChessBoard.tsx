@@ -1,6 +1,5 @@
 
-import React, { useState } from 'react';
-import { Crown, Castle } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
 
 interface Square {
   file: string;
@@ -15,48 +14,67 @@ interface ChessPiece {
   symbol: string;
 }
 
-const ChessBoard: React.FC = () => {
+interface ChessBoardProps {
+  position: string;
+  onMove?: (from: string, to: string) => boolean;
+  highlightSquares?: string[];
+  orientation?: 'white' | 'black';
+}
+
+const ChessBoard: React.FC<ChessBoardProps> = ({ 
+  position, 
+  onMove, 
+  highlightSquares = [],
+  orientation = 'white' 
+}) => {
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-  const ranks = [8, 7, 6, 5, 4, 3, 2, 1];
-
-  // Initial chess position
-  const initialPosition: { [key: string]: ChessPiece } = {
-    'a8': { type: 'rook', color: 'black', symbol: '♜' },
-    'b8': { type: 'knight', color: 'black', symbol: '♞' },
-    'c8': { type: 'bishop', color: 'black', symbol: '♝' },
-    'd8': { type: 'queen', color: 'black', symbol: '♛' },
-    'e8': { type: 'king', color: 'black', symbol: '♚' },
-    'f8': { type: 'bishop', color: 'black', symbol: '♝' },
-    'g8': { type: 'knight', color: 'black', symbol: '♞' },
-    'h8': { type: 'rook', color: 'black', symbol: '♜' },
-    'a7': { type: 'pawn', color: 'black', symbol: '♟' },
-    'b7': { type: 'pawn', color: 'black', symbol: '♟' },
-    'c7': { type: 'pawn', color: 'black', symbol: '♟' },
-    'd7': { type: 'pawn', color: 'black', symbol: '♟' },
-    'e7': { type: 'pawn', color: 'black', symbol: '♟' },
-    'f7': { type: 'pawn', color: 'black', symbol: '♟' },
-    'g7': { type: 'pawn', color: 'black', symbol: '♟' },
-    'h7': { type: 'pawn', color: 'black', symbol: '♟' },
-    'a1': { type: 'rook', color: 'white', symbol: '♖' },
-    'b1': { type: 'knight', color: 'white', symbol: '♘' },
-    'c1': { type: 'bishop', color: 'white', symbol: '♗' },
-    'd1': { type: 'queen', color: 'white', symbol: '♕' },
-    'e1': { type: 'king', color: 'white', symbol: '♔' },
-    'f1': { type: 'bishop', color: 'white', symbol: '♗' },
-    'g1': { type: 'knight', color: 'white', symbol: '♘' },
-    'h1': { type: 'rook', color: 'white', symbol: '♖' },
-    'a2': { type: 'pawn', color: 'white', symbol: '♙' },
-    'b2': { type: 'pawn', color: 'white', symbol: '♙' },
-    'c2': { type: 'pawn', color: 'white', symbol: '♙' },
-    'd2': { type: 'pawn', color: 'white', symbol: '♙' },
-    'e2': { type: 'pawn', color: 'white', symbol: '♙' },
-    'f2': { type: 'pawn', color: 'white', symbol: '♙' },
-    'g2': { type: 'pawn', color: 'white', symbol: '♙' },
-    'h2': { type: 'pawn', color: 'white', symbol: '♙' },
-  };
-
-  const [position, setPosition] = useState(initialPosition);
+  const ranks = orientation === 'white' ? [8, 7, 6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6, 7, 8];
+  
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [draggedPiece, setDraggedPiece] = useState<{ square: string; piece: ChessPiece } | null>(null);
+
+  // Parse FEN position
+  const parsePosition = useCallback((fen: string): { [key: string]: ChessPiece } => {
+    const pieces: { [key: string]: ChessPiece } = {};
+    const fenParts = fen.split(' ');
+    const boardState = fenParts[0];
+    const ranks = boardState.split('/');
+    
+    const pieceMap: { [key: string]: { type: ChessPiece['type'], color: 'white' | 'black', symbol: string } } = {
+      'K': { type: 'king', color: 'white', symbol: '♔' },
+      'Q': { type: 'queen', color: 'white', symbol: '♕' },
+      'R': { type: 'rook', color: 'white', symbol: '♖' },
+      'B': { type: 'bishop', color: 'white', symbol: '♗' },
+      'N': { type: 'knight', color: 'white', symbol: '♘' },
+      'P': { type: 'pawn', color: 'white', symbol: '♙' },
+      'k': { type: 'king', color: 'black', symbol: '♚' },
+      'q': { type: 'queen', color: 'black', symbol: '♛' },
+      'r': { type: 'rook', color: 'black', symbol: '♜' },
+      'b': { type: 'bishop', color: 'black', symbol: '♝' },
+      'n': { type: 'knight', color: 'black', symbol: '♞' },
+      'p': { type: 'pawn', color: 'black', symbol: '♟' },
+    };
+
+    ranks.forEach((rank, rankIndex) => {
+      let fileIndex = 0;
+      for (const char of rank) {
+        if (isNaN(parseInt(char))) {
+          const piece = pieceMap[char];
+          if (piece) {
+            const square = `${files[fileIndex]}${8 - rankIndex}`;
+            pieces[square] = piece;
+          }
+          fileIndex++;
+        } else {
+          fileIndex += parseInt(char);
+        }
+      }
+    });
+
+    return pieces;
+  }, []);
+
+  const pieces = parsePosition(position);
 
   const getSquareColor = (file: string, rank: number): boolean => {
     const fileIndex = files.indexOf(file);
@@ -64,19 +82,42 @@ const ChessBoard: React.FC = () => {
   };
 
   const handleSquareClick = (square: string) => {
-    if (selectedSquare === square) {
-      setSelectedSquare(null);
-    } else {
+    if (selectedSquare) {
+      if (selectedSquare === square) {
+        setSelectedSquare(null);
+      } else {
+        const success = onMove?.(selectedSquare, square);
+        setSelectedSquare(null);
+      }
+    } else if (pieces[square]) {
       setSelectedSquare(square);
     }
   };
 
+  const handleDragStart = (square: string, piece: ChessPiece) => {
+    setDraggedPiece({ square, piece });
+    setSelectedSquare(square);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedPiece(null);
+    setSelectedSquare(null);
+  };
+
+  const handleDrop = (targetSquare: string) => {
+    if (draggedPiece) {
+      onMove?.(draggedPiece.square, targetSquare);
+    }
+    handleDragEnd();
+  };
+
   const getSquareClasses = (square: string, isLight: boolean) => {
-    const baseClasses = "w-16 h-16 flex items-center justify-center text-4xl cursor-pointer transition-all duration-200 hover:brightness-110";
+    const baseClasses = "w-16 h-16 flex items-center justify-center text-4xl cursor-pointer transition-all duration-200 hover:brightness-110 relative";
     const colorClasses = isLight ? "bg-amber-100" : "bg-amber-800";
     const selectedClasses = selectedSquare === square ? "ring-4 ring-blue-500" : "";
+    const highlightClasses = highlightSquares.includes(square) ? "ring-2 ring-green-500" : "";
     
-    return `${baseClasses} ${colorClasses} ${selectedClasses}`;
+    return `${baseClasses} ${colorClasses} ${selectedClasses} ${highlightClasses}`;
   };
 
   return (
@@ -86,26 +127,37 @@ const ChessBoard: React.FC = () => {
           files.map(file => {
             const square = `${file}${rank}`;
             const isLight = getSquareColor(file, rank);
-            const piece = position[square];
+            const piece = pieces[square];
             
             return (
               <div
                 key={square}
                 className={getSquareClasses(square, isLight)}
                 onClick={() => handleSquareClick(square)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleDrop(square)}
               >
                 {piece && (
-                  <span className={`select-none ${piece.color === 'white' ? 'text-white drop-shadow-lg' : 'text-black'}`}>
+                  <span 
+                    className={`select-none ${piece.color === 'white' ? 'text-white drop-shadow-lg' : 'text-black'}`}
+                    draggable
+                    onDragStart={() => handleDragStart(square, piece)}
+                    onDragEnd={handleDragEnd}
+                  >
                     {piece.symbol}
                   </span>
                 )}
+                {/* Square coordinates for debugging */}
+                <span className="absolute bottom-0 right-0 text-xs opacity-30">
+                  {square}
+                </span>
               </div>
             );
           })
         )}
       </div>
       
-      {/* Coordinate labels */}
+      {/* File labels */}
       <div className="flex justify-between w-full max-w-lg mt-2">
         {files.map(file => (
           <div key={file} className="w-16 text-center text-sm font-semibold text-amber-800">
